@@ -1,0 +1,1882 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schichtplan-Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #0056b3;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-group input[type="text"],
+        .input-group textarea,
+        .input-group select,
+        .input-group input[type="number"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .input-group button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .input-group button:hover {
+            background-color: #0056b3;
+        }
+        .list-display {
+            margin-top: 10px;
+            border: 1px solid #eee;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            min-height: 50px;
+        }
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px dashed #eee;
+            cursor: grab; /* Cursor for draggable items */
+            background-color: #fff; /* Background for draggable items */
+            margin-bottom: 2px;
+        }
+        .list-item:last-child {
+            border-bottom: none;
+        }
+        /* Drag-and-drop visual feedback */
+        .list-item.dragging {
+            opacity: 0.5;
+            border: 2px dashed #007bff;
+        }
+        .list-item.drag-over {
+            border-top: 2px solid #007bff;
+        }
+        .list-item.drag-over-bottom {
+            border-bottom: 2px solid #007bff;
+        }
+
+        .remove-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1;
+            padding: 0;
+            margin-left: 10px;
+        }
+        .remove-btn:hover {
+            background-color: #c82333;
+        }
+        .assign-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .assign-section select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .assign-section .skill-assign-box {
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #fdfdfd;
+        }
+        .assign-section .skill-assign-box h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+
+        #scheduleOutput {
+            margin-top: 30px;
+            border-top: 2px solid #007bff;
+            padding-top: 20px;
+        }
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .schedule-table th, .schedule-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        .schedule-table th {
+            background-color: #e2f0ff;
+            color: #0056b3;
+        }
+        .schedule-table td {
+            background-color: #fff;
+        }
+        .error-message {
+            color: red;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .info-message {
+            color: green;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .present-employees-box {
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #fdfdfd;
+            margin-top: 20px;
+        }
+        .present-employees-box h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .present-employees-box .checkbox-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        /* Style für deaktivierte Checkboxen */
+        .present-employees-box .checkbox-group input[type="checkbox"]:disabled + span,
+        .present-employees-box .checkbox-group input[type="checkbox"]:disabled {
+            color: #999;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .print-button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .print-button:hover {
+            background-color: #218838;
+        }
+        #selectedEmployeeCount {
+            font-weight: bold;
+            margin-top: 10px;
+            color: #0056b3;
+        }
+
+        /* Neue Farben für manuelle Überprüfung */
+        .schedule-table td.error-duplicate {
+            background-color: #ff6666 !important; /* Rot für Doppelbelegung */
+        }
+        .schedule-table td.warn-skill {
+            background-color: #ffaa00 !important; /* Orange für fehlende Fähigkeit */
+        }
+        .schedule-table td.warn-unknown {
+            background-color: #a0a0a0 !important; /* Blau-Grau für unbekannten Mitarbeiter */
+        }
+        .schedule-table td.auto-compromise {
+            background-color: #ffddaa !important; /* Gelb für automatische Kompromisse (Standardfarbe) */
+        }
+
+        /* Admin-Menü Overlay Styles */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .overlay-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 700px; /* Etwas breiter für die neuen Optionen */
+            max-height: 90vh; /* Damit es nicht zu hoch wird */
+            overflow-y: auto; /* Scrollbar, wenn Inhalt zu groß */
+            position: relative;
+        }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #555;
+        }
+        .close-btn:hover {
+            color: #000;
+        }
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .login-form input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .login-form button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .login-form button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Admin-Menü spezifische Styles */
+        #adminMenuContent select {
+            width: calc(100% - 2px); /* Anpassen, da padding 10px + border 1px * 2 */
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #adminMenuContent .list-display { /* Generische Liste für verknüpfte WPs und Mitarbeiter */
+            margin-top: 10px;
+            border: 1px solid #eee;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            min-height: 50px;
+        }
+        #adminMenuContent .list-item { /* Generisches List Item für verknüpfte WPs und Mitarbeiter */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px dashed #eee;
+        }
+        #adminMenuContent .list-item:last-child {
+            border-bottom: none;
+        }
+        #adminMenuContent .remove-btn-small { /* Generischer kleiner Remove Button */
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1;
+            padding: 0;
+            margin-left: 10px;
+        }
+        .admin-section {
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        .admin-section h3 {
+            color: #007bff;
+            margin-top: 0;
+        }
+        .admin-section .input-group {
+            margin-bottom: 10px; /* Etwas weniger Abstand hier */
+        }
+        .admin-section .input-group button {
+            margin-top: 5px; /* Etwas weniger Abstand hier */
+        }
+        .employee-pair-item span {
+            flex-grow: 1; /* Nimmt verfügbaren Platz ein */
+        }
+        .employee-pair-item select {
+            width: auto; /* Nicht volle Breite */
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+
+        /* Neue Styles für den Admin-Button */
+        .admin-button-container {
+            display: flex; /* Für Flexbox-Ausrichtung */
+            justify-content: flex-end; /* Button nach rechts */
+            margin-bottom: 20px; /* Abstand nach unten */
+        }
+
+        .admin-access-button {
+            background-color: #6c757d; /* Grau */
+            color: white;
+            padding: 12px 25px; /* Etwas größer */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 18px; /* Größere Schrift */
+            font-weight: bold; /* Fett */
+            transition: background-color 0.2s ease; /* Sanfter Übergang beim Hover */
+        }
+
+        .admin-access-button:hover {
+            background-color: #5a6268; /* Dunkleres Grau beim Hover */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Schichtplan Generator</h1>
+        <p>Erfasse deine Mitarbeiter, Arbeitsplätze und deren Fähigkeiten, um einen täglichen Schichtplan zu erstellen.</p>
+
+        <div class="admin-button-container">
+            <button class="admin-access-button" onclick="openAdminLogin()">Login</button>
+        </div>
+        
+        
+
+<div class="input-group">
+    <button onclick="exportToJSON()">Daten als JSON exportieren</button>
+    <input type="file" id="importJSONFile" accept=".json" style="display:none" onchange="importFromJSON(event)">
+    <button onclick="document.getElementById('importJSONFile').click()">Daten aus JSON importieren</button>
+</div>
+
+
+        <h2>1. Mitarbeiter erfassen</h2>
+        <div class="input-group">
+            <label for="employeeName">Mitarbeitername:</label>
+            <input type="text" id="employeeName" placeholder="Max Mustermann">
+            <button onclick="addEmployee()">Mitarbeiter hinzufügen</button>
+        </div>
+        <div class="list-display" id="employeeList">
+            </div>
+
+        
+
+        <h2>2. Arbeitsplätze erfassen</h2>
+        <div class="input-group">
+            <label for="workplaceName">Arbeitsplatzbezeichnung:</label>
+            <input type="text" id="workplaceName" placeholder="Montage Station A">
+            <button onclick="addWorkplace()">Arbeitsplatz hinzufügen</button>
+        </div>
+        <div class="list-display" id="workplaceList">
+            </div>
+
+        
+
+        <h2>3. Mitarbeiter-Fähigkeiten zuweisen</h2>
+        <p>Wähle einen Mitarbeiter und die Arbeitsplätze aus, die er beherrscht.</p>
+        <div class="assign-section">
+            <div class="skill-assign-box">
+                <h3>Mitarbeiter auswählen</h3>
+                <select id="selectEmployeeForSkills" onchange="displayEmployeeSkills()"></select>
+            </div>
+            <div class="skill-assign-box">
+                <h3>Beherrschte Arbeitsplätze</h3>
+                <p>Halte die STRG/CMD-Taste gedrückt, um mehrere Arbeitsplätze auszuwählen.</p>
+                <select id="selectWorkplacesForSkills" multiple size="8"></select>
+                <button onclick="assignSkills()">Fähigkeiten zuweisen</button>
+                <div class="list-display" id="currentEmployeeSkills">
+                    </div>
+            </div>
+        </div>
+
+        
+
+        <h2>4. Schichtplan erstellen</h2>
+        <div class="input-group">
+            <label for="dayOfWeek">Tag auswählen:</label>
+            <select id="dayOfWeek">
+                <option value="Montag">Montag</option>
+                <option value="Dienstag">Dienstag</option>
+                <option value="Mittwoch">Mittwoch</option>
+                <option value="Donnerstag">Donnerstag</option>
+                <option value="Freitag">Freitag</option>
+                <option value="Samstag">Samstag</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="maxWorkplaceRepeats">Max. Wiederholungen pro Mitarbeiter & Arbeitsplatz pro Tag:</label>
+            <input type="number" id="maxWorkplaceRepeats" value="1" min="1" max="4">
+            <small>Bestimmt, wie oft ein Mitarbeiter maximal denselben Arbeitsplatz am Tag besetzen darf. Höhere Werte erhöhen die Flexibilität, aber auch die Doppelbelegung.</small>
+        </div>
+
+        <div class="present-employees-box"> 
+            <h3>Mitarbeiter, die an diesem Tag arbeiten</h3> 
+            <p>Wählen Sie die Mitarbeiter aus, die für den ausgewählten Tag eingeplant werden sollen.</p> 
+            <div id="presentEmployeesCheckboxes" class="checkbox-group"> 
+            </div>
+            <div id="selectedEmployeeCount"></div>
+        </div>
+        <div class="input-group">
+            <button onclick="generateSchedule()">Schichtplan erstellen</button>
+        </div>
+
+        <div id="scheduleOutput">
+            </div>
+        <button id="printScheduleBtn" class="print-button" style="display:none;" onclick="printSchedule()">Schichtplan drucken / als PDF speichern</button>
+        <div id="errorMessage" class="error-message"></div>
+        <div id="infoMessage" class="info-message"></div>
+    </div>
+
+    <div id="adminOverlay" class="overlay">
+        <div class="overlay-content">
+            <span class="close-btn" onclick="closeAdminMenu()">&times;</span>
+            <div id="adminLogin">
+                <h2>Admin-Login</h2>
+                <div class="login-form">
+                    <input type="text" id="adminUsername" placeholder="Benutzername">
+                    <input type="password" id="adminPassword" placeholder="Passwort">
+                    <button onclick="loginAdmin()">Login</button>
+                    <div id="adminLoginMessage" class="error-message"></div>
+                </div>
+            </div>
+
+            <div id="adminMenuContent" style="display:none;">
+                <h2>Admin-Einstellungen</h2>
+
+                <div class="admin-section">
+                    <h3>Arbeitsplatz-Verknüpfungen verwalten</h3>
+                    <p>Wähle zwei Arbeitsplätze aus, die immer zusammen besetzt werden sollen.</p>
+                    <div class="input-group">
+                        <label for="selectWorkplace1">Arbeitsplatz 1:</label>
+                        <select id="selectWorkplace1"></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="selectWorkplace2">Arbeitsplatz 2:</label>
+                        <select id="selectWorkplace2"></select>
+                    </div>
+                    <button onclick="addWorkplaceLink()">Verknüpfung hinzufügen</button>
+                    <div id="linkedWorkplaceMessage" class="error-message"></div>
+
+                    <div class="list-display" id="linkedWorkplacesList">
+                        </div>
+                </div>
+
+                <div class="admin-section">
+                    <h3>Mitarbeiter-Paare verwalten (Gerne zusammen arbeiten)</h3>
+                    <p>Wähle zwei Mitarbeiter aus, die gerne zusammenarbeiten.</p>
+                    <div class="input-group">
+                        <label for="selectEmployee1">Mitarbeiter 1:</label>
+                        <select id="selectEmployee1"></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="selectEmployee2">Mitarbeiter 2:</label>
+                        <select id="selectEmployee2"></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="maxPairingsPerDay">Max. gemeinsame Runden pro Tag:</label>
+                        <select id="maxPairingsPerDay">
+                            <option value="1">1 Runde</option>
+                            <option value="2">2 Runden</option>
+                            <option value="3">3 Runden</option>
+                            <option value="4">4 Runden</option>
+                        </select>
+                    </div>
+                    <button onclick="addEmployeePair()">Paar hinzufügen</button>
+                    <div id="employeePairMessage" class="error-message"></div>
+
+                    <div class="list-display" id="employeePairsList">
+                        </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let employees = [];
+        let workplaces = [];
+        let employeeSkills = {}; // { employeeName: [workplace1, workplace2], ... }
+        let allDailySchedules = {}; // { 'Montag': { '1. Runde': { 'WP1': 'EmpA' } }, 'Dienstag': { ... } }
+        let linkedWorkplaces = []; // [[wp1, wp2], [wp3, wp4]]
+        let employeePairs = []; // [{ pair: ['Mitarbeiter A', 'Mitarbeiter B'], maxDailyPairings: 2 }]
+
+        let draggedItem = null; // To store the currently dragged DOM element
+
+        // --- Funktionen zum Speichern und Laden der Daten im Local Storage ---
+        function saveData() {
+            localStorage.setItem('employees', JSON.stringify(employees));
+            localStorage.setItem('workplaces', JSON.stringify(workplaces));
+            localStorage.setItem('employeeSkills', JSON.stringify(employeeSkills));
+            localStorage.setItem('allDailySchedules', JSON.stringify(allDailySchedules));
+            localStorage.setItem('linkedWorkplaces', JSON.stringify(linkedWorkplaces));
+            localStorage.setItem('employeePairs', JSON.stringify(employeePairs));
+        }
+
+        function loadData() {
+            const storedEmployees = localStorage.getItem('employees');
+            const storedWorkplaces = localStorage.getItem('workplaces');
+            const storedEmployeeSkills = localStorage.getItem('employeeSkills');
+            const storedDailySchedules = localStorage.getItem('allDailySchedules');
+            const storedLinkedWorkplaces = localStorage.getItem('linkedWorkplaces');
+            const storedEmployeePairs = localStorage.getItem('employeePairs');
+
+            if (storedEmployees) {
+                employees = JSON.parse(storedEmployees);
+            }
+            if (storedWorkplaces) {
+                workplaces = JSON.parse(storedWorkplaces);
+            }
+            if (storedEmployeeSkills) {
+                employeeSkills = JSON.parse(storedEmployeeSkills);
+            }
+            if (storedDailySchedules) {
+                allDailySchedules = JSON.parse(storedDailySchedules);
+            }
+            if (storedLinkedWorkplaces) {
+                linkedWorkplaces = JSON.parse(storedLinkedWorkplaces);
+            }
+            if (storedEmployeePairs) {
+                employeePairs = JSON.parse(storedEmployeePairs);
+            }
+        }
+
+        // --- Admin-Menü Funktionen ---
+        function openAdminLogin() {
+            document.getElementById('adminOverlay').style.display = 'flex';
+            document.getElementById('adminLogin').style.display = 'block';
+            document.getElementById('adminMenuContent').style.display = 'none';
+            document.getElementById('adminUsername').value = '';
+            document.getElementById('adminPassword').value = '';
+            document.getElementById('adminLoginMessage').textContent = '';
+        }
+
+        function closeAdminMenu() {
+            document.getElementById('adminOverlay').style.display = 'none';
+        }
+
+        function loginAdmin() {
+            const username = document.getElementById('adminUsername').value;
+            const password = document.getElementById('adminPassword').value;
+            const loginMessageDiv = document.getElementById('adminLoginMessage');
+
+            if (username === 'admin' && password === 'admin') {
+                document.getElementById('adminLogin').style.display = 'none';
+                document.getElementById('adminMenuContent').style.display = 'block';
+                updateLinkedWorkplaceSelects();
+                renderLinkedWorkplaces();
+                updateEmployeePairSelects();
+                renderEmployeePairs();
+                loginMessageDiv.textContent = '';
+            } else {
+                loginMessageDiv.textContent = 'Falscher Benutzername oder Passwort.';
+            }
+        }
+
+        // --- Arbeitsplatz-Verknüpfungs-Funktionen ---
+        function updateLinkedWorkplaceSelects() {
+            const selectWp1 = document.getElementById('selectWorkplace1');
+            const selectWp2 = document.getElementById('selectWorkplace2');
+            
+            selectWp1.innerHTML = '<option value="">-- Arbeitsplatz 1 auswählen --</option>';
+            selectWp2.innerHTML = '<option value="">-- Arbeitsplatz 2 auswählen --</option>';
+
+            workplaces.forEach(wp => {
+                const option1 = document.createElement('option');
+                option1.value = wp;
+                option1.textContent = wp;
+                selectWp1.appendChild(option1);
+
+                const option2 = document.createElement('option');
+                option2.value = wp;
+                option2.textContent = wp;
+                selectWp2.appendChild(option2);
+            });
+        }
+
+        function addWorkplaceLink() {
+            const wp1 = document.getElementById('selectWorkplace1').value;
+            const wp2 = document.getElementById('selectWorkplace2').value;
+            const messageDiv = document.getElementById('linkedWorkplaceMessage');
+            messageDiv.textContent = ''; 
+
+            if (!wp1 || !wp2) {
+                messageDiv.textContent = 'Bitte wählen Sie zwei Arbeitsplätze aus.';
+                return;
+            }
+            if (wp1 === wp2) {
+                messageDiv.textContent = 'Arbeitsplätze dürfen nicht identisch sein.';
+                return;
+            }
+
+            const newLink = [wp1, wp2].sort(); 
+
+            const alreadyLinked = linkedWorkplaces.some(link => 
+                (link[0] === newLink[0] && link[1] === newLink[1])
+            );
+
+            if (alreadyLinked) {
+                messageDiv.textContent = 'Diese Arbeitsplatz-Verknüpfung existiert bereits.';
+                return;
+            }
+
+            const isAlreadyInAnotherLink = linkedWorkplaces.some(link => 
+                link.includes(wp1) || link.includes(wp2)
+            );
+
+            if (isAlreadyInAnotherLink) {
+                messageDiv.textContent = `Mindestens einer der Arbeitsplätze (${wp1} oder ${wp2}) ist bereits in einer anderen Verknüpfung enthalten. Ein Arbeitsplatz kann nur in einer Verknüpfung sein.`;
+                return;
+            }
+
+            linkedWorkplaces.push(newLink);
+            saveData();
+            renderLinkedWorkplaces();
+            messageDiv.textContent = `Verknüpfung "${wp1}" und "${wp2}" hinzugefügt.`;
+            document.getElementById('selectWorkplace1').value = '';
+            document.getElementById('selectWorkplace2').value = '';
+        }
+
+        function removeWorkplaceLink(index) {
+            const removedLink = linkedWorkplaces.splice(index, 1);
+            saveData();
+            renderLinkedWorkplaces();
+            document.getElementById('linkedWorkplaceMessage').textContent = `Verknüpfung "${removedLink[0][0]}" und "${removedLink[0][1]}" entfernt.`;
+        }
+
+        function renderLinkedWorkplaces() {
+            const listDiv = document.getElementById('linkedWorkplacesList');
+            listDiv.innerHTML = linkedWorkplaces.length === 0 ? 'Noch keine Arbeitsplätze verknüpft.' : '';
+
+            linkedWorkplaces.forEach((link, index) => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `<span>${link[0]} & <span style="font-weight: bold;">${link[1]}</span></span><button class="remove-btn-small" onclick="removeWorkplaceLink(${index})">X</button>`;
+                listDiv.appendChild(div);
+            });
+        }
+
+        // --- Mitarbeiter-Paar Verknüpfungs-Funktionen ---
+        function updateEmployeePairSelects() {
+            const selectEmp1 = document.getElementById('selectEmployee1');
+            const selectEmp2 = document.getElementById('selectEmployee2');
+            
+            selectEmp1.innerHTML = '<option value="">-- Mitarbeiter 1 auswählen --</option>';
+            selectEmp2.innerHTML = '<option value="">-- Mitarbeiter 2 auswählen --</option>';
+
+            employees.forEach(emp => {
+                const option1 = document.createElement('option');
+                option1.value = emp;
+                option1.textContent = emp;
+                selectEmp1.appendChild(option1);
+
+                const option2 = document.createElement('option');
+                option2.value = emp;
+                option2.textContent = emp;
+                selectEmp2.appendChild(option2);
+            });
+        }
+
+        function addEmployeePair() {
+            const emp1 = document.getElementById('selectEmployee1').value;
+            const emp2 = document.getElementById('selectEmployee2').value;
+            const maxPairings = parseInt(document.getElementById('maxPairingsPerDay').value, 10);
+            const messageDiv = document.getElementById('employeePairMessage');
+            messageDiv.textContent = '';
+
+            if (!emp1 || !emp2) {
+                messageDiv.textContent = 'Bitte wählen Sie zwei Mitarbeiter aus.';
+                return;
+            }
+            if (emp1 === emp2) {
+                messageDiv.textContent = 'Mitarbeiter dürfen nicht identisch sein.';
+                return;
+            }
+
+            const newPair = [emp1, emp2].sort(); 
+            
+            const alreadyPaired = employeePairs.some(p => 
+                (p.pair[0] === newPair[0] && p.pair[1] === newPair[1])
+            );
+
+            if (alreadyPaired) {
+                messageDiv.textContent = 'Dieses Mitarbeiter-Paar existiert bereits.';
+                return;
+            }
+
+            const isAlreadyInAnotherPair = employeePairs.some(p => 
+                p.pair.includes(emp1) || p.pair.includes(emp2)
+            );
+            if (isAlreadyInAnotherPair) {
+                messageDiv.textContent = `Mindestens einer der Mitarbeiter (${emp1} oder ${emp2}) ist bereits in einem anderen Paar enthalten. Ein Mitarbeiter kann nur in einem bevorzugten Paar sein.`;
+                return;
+            }
+
+            employeePairs.push({ pair: newPair, maxDailyPairings: maxPairings });
+            saveData();
+            renderEmployeePairs();
+            messageDiv.textContent = `Mitarbeiter-Paar "${emp1}" und "${emp2}" hinzugefügt (max. ${maxPairings} Runden/Tag).`;
+            document.getElementById('selectEmployee1').value = '';
+            document.getElementById('selectEmployee2').value = '';
+            document.getElementById('maxPairingsPerDay').value = '1'; 
+        }
+
+        function removeEmployeePair(index) {
+            const removedPair = employeePairs.splice(index, 1);
+            saveData();
+            renderEmployeePairs();
+            document.getElementById('employeePairMessage').textContent = `Mitarbeiter-Paar "${removedPair[0].pair[0]}" und "${removedPair[0].pair[1]}" entfernt.`;
+        }
+
+        function renderEmployeePairs() {
+            const listDiv = document.getElementById('employeePairsList');
+            listDiv.innerHTML = employeePairs.length === 0 ? 'Noch keine Mitarbeiter-Paare verknüpft.' : '';
+
+            employeePairs.forEach((pairObj, index) => {
+                const div = document.createElement('div');
+                div.className = 'list-item employee-pair-item';
+                div.innerHTML = `
+                    <span>${pairObj.pair[0]} & <span style="font-weight: bold;">${pairObj.pair[1]}</span></span>
+                    <select onchange="updateEmployeePairMaxPairings(${index}, this.value)">
+                        <option value="1" ${pairObj.maxDailyPairings === 1 ? 'selected' : ''}>1 Runde</option>
+                        <option value="2" ${pairObj.maxDailyPairings === 2 ? 'selected' : ''}>2 Runden</option>
+                        <option value="3" ${pairObj.maxDailyPairings === 3 ? 'selected' : ''}>3 Runden</option>
+                        <option value="4" ${pairObj.maxDailyPairings === 4 ? 'selected' : ''}>4 Runden</option>
+                    </select>
+                    <button class="remove-btn-small" onclick="removeEmployeePair(${index})">X</button>
+                `;
+                listDiv.appendChild(div);
+            });
+        }
+
+        function updateEmployeePairMaxPairings(index, newValue) {
+            employeePairs[index].maxDailyPairings = parseInt(newValue, 10);
+            saveData();
+            displayMessage('Maximale gemeinsame Runden aktualisiert.', 'info');
+        }
+
+        // --- Funktionen zum Hinzufügen und Anzeigen von Mitarbeitern ---
+        function addEmployee() {
+            const employeeNameInput = document.getElementById('employeeName');
+            const name = employeeNameInput.value.trim();
+            if (name && !employees.includes(name)) {
+                employees.push(name);
+                employeeSkills[name] = [];
+                renderEmployeeList();
+                updateEmployeeSelects();
+                updatePresentEmployeeCheckboxes();
+                updateEmployeePairSelects();
+                employeeNameInput.value = '';
+                displayMessage('', 'info'); 
+                saveData(); 
+            } else if (name && employees.includes(name)) {
+                displayMessage('Mitarbeiter "' + name + '" existiert bereits.', 'error');
+            } else {
+                displayMessage('Bitte einen gültigen Mitarbeiternamen eingeben.', 'error');
+            }
+        }
+
+        function removeEmployee(nameToRemove) {
+            const isPaired = employeePairs.some(pairObj => pairObj.pair.includes(nameToRemove));
+            if (isPaired) {
+                displayMessage(`Fehler: Mitarbeiter "${nameToRemove}" ist Teil eines bevorzugten Paares und kann nicht gelöscht werden. Entfernen Sie zuerst das Paar im Admin-Menü.`, 'error');
+                return;
+            }
+
+            employees = employees.filter(emp => emp !== nameToRemove);
+            delete employeeSkills[nameToRemove]; 
+            for (const day in allDailySchedules) {
+                for (const rotation in allDailySchedules[day]) {
+                    for (const workplace in allDailySchedules[day][rotation]) {
+                        if (allDailySchedules[day][rotation][workplace] === nameToRemove) {
+                            allDailySchedules[day][rotation][workplace] = 'N/A'; 
+                        }
+                    }
+                }
+            }
+            renderEmployeeList();
+            updateEmployeeSelects();
+            updatePresentEmployeeCheckboxes();
+            updateEmployeePairSelects();
+            displayMessage(`Mitarbeiter "${nameToRemove}" wurde entfernt.`, 'info');
+            saveData(); 
+        }
+
+        function renderEmployeeList() {
+            const employeeListDiv = document.getElementById('employeeList');
+            employeeListDiv.innerHTML = employees.length === 0 ? 'Noch keine Mitarbeiter hinzugefügt.' : '';
+            employees.forEach((emp, index) => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.draggable = true; // Make draggable
+                div.dataset.index = index; // Store original index
+                div.id = 'employee-' + emp.replace(/\s/g, '-'); // Unique ID for drag-drop
+
+                div.innerHTML = `<span>${emp}</span><button class="remove-btn" onclick="removeEmployee('${emp}')">X</button>`;
+                
+                // Add drag-and-drop event listeners
+                div.addEventListener('dragstart', handleDragStart);
+                div.addEventListener('dragover', handleDragOver);
+                div.addEventListener('dragleave', handleDragLeave);
+                div.addEventListener('drop', handleDrop);
+                div.addEventListener('dragend', handleDragEnd);
+
+                employeeListDiv.appendChild(div);
+            });
+        }
+
+        // --- Functions for Drag and Drop (Employees) ---
+        let draggedEmployeeIndex = null;
+
+        function handleDragStart(e) {
+            draggedItem = e.target;
+            draggedEmployeeIndex = parseInt(draggedItem.dataset.index);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', draggedItem.innerHTML); // Required for Firefox
+            
+            setTimeout(() => {
+                draggedItem.classList.add('dragging');
+            }, 0); // Add class after drag started to hide the original item immediately
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault(); // Necessary to allow dropping
+            e.dataTransfer.dropEffect = 'move';
+            if (e.target.classList.contains('list-item') && e.target !== draggedItem) {
+                // Determine if dropping above or below
+                const rect = e.target.getBoundingClientRect();
+                const offsetY = e.clientY - rect.top;
+                if (offsetY < rect.height / 2) {
+                    e.target.classList.add('drag-over');
+                    e.target.classList.remove('drag-over-bottom');
+                } else {
+                    e.target.classList.add('drag-over-bottom');
+                    e.target.classList.remove('drag-over');
+                }
+            }
+        }
+
+        function handleDragLeave(e) {
+            e.target.classList.remove('drag-over', 'drag-over-bottom');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.target.classList.remove('drag-over', 'drag-over-bottom');
+
+            if (e.target.classList.contains('list-item') && e.target !== draggedItem) {
+                const targetEmployeeIndex = parseInt(e.target.dataset.index);
+                const rect = e.target.getBoundingClientRect();
+                const offsetY = e.clientY - rect.top;
+                let newIndex = targetEmployeeIndex;
+
+                if (offsetY > rect.height / 2) {
+                    newIndex++; // Drop below the target item
+                }
+                
+                if (draggedEmployeeIndex === null) return; // Should not happen
+
+                const [movedEmployee] = employees.splice(draggedEmployeeIndex, 1);
+                employees.splice(newIndex > draggedEmployeeIndex ? newIndex - 1 : newIndex, 0, movedEmployee);
+                
+                // Update `employeeSkills` keys if employee names change position
+                // (No, `employeeSkills` object keys are actual names, so they don't change by moving positions in the array.)
+                // The keys in `employeeSkills` (e.g., "Max Mustermann") remain the same regardless of their order in the `employees` array.
+
+                saveData();
+                renderEmployeeList(); // Re-render to reflect the new order and update data-index attributes
+                updateEmployeeSelects();
+                updatePresentEmployeeCheckboxes();
+                updateEmployeePairSelects();
+            }
+        }
+
+        function handleDragEnd(e) {
+            draggedItem.classList.remove('dragging');
+            draggedItem = null;
+            draggedEmployeeIndex = null;
+            document.querySelectorAll('.list-item').forEach(item => {
+                item.classList.remove('drag-over', 'drag-over-bottom');
+            });
+        }
+
+
+        // --- Funktionen zum Hinzufügen, Löschen und Anzeigen von Arbeitsplätzen ---
+        function addWorkplace() {
+            const workplaceNameInput = document.getElementById('workplaceName');
+            const name = workplaceNameInput.value.trim();
+            if (name && !workplaces.includes(name)) {
+                workplaces.push(name);
+                renderWorkplaceList();
+                updateWorkplaceSelects();
+                updateLinkedWorkplaceSelects(); 
+                workplaceNameInput.value = '';
+                displayMessage('', 'info'); 
+                saveData(); 
+                updatePresentEmployeeCheckboxes(); 
+            } else if (name && workplaces.includes(name)) {
+                displayMessage('Arbeitsplatz "' + name + '" existiert bereits.', 'error');
+            } else {
+                displayMessage('Bitte eine gültige Arbeitsplatzbezeichnung eingeben.', 'error');
+            }
+        }
+
+        function removeWorkplace(nameToRemove) {
+            const isLinked = linkedWorkplaces.some(link => link.includes(nameToRemove));
+            if (isLinked) {
+                displayMessage(`Fehler: Arbeitsplatz "${nameToRemove}" ist Teil einer Verknüpfung und kann nicht gelöscht werden. Entfernen Sie zuerst die Verknüpfung im Admin-Menü.`, 'error');
+                return;
+            }
+
+            workplaces = workplaces.filter(wp => wp !== nameToRemove);
+            
+            for (const emp in employeeSkills) {
+                employeeSkills[emp] = employeeSkills[emp].filter(skill => skill !== nameToRemove);
+            }
+            for (const day in allDailySchedules) {
+                for (const rotation in allDailySchedules[day]) {
+                    delete allDailySchedules[day][rotation][nameToRemove];
+                }
+            }
+
+            renderWorkplaceList();
+            updateWorkplaceSelects();
+            updateLinkedWorkplaceSelects(); 
+            displayEmployeeSkills(); 
+            displayMessage(`Arbeitsplatz "${nameToRemove}" wurde entfernt.`, 'info');
+            saveData(); 
+            updatePresentEmployeeCheckboxes(); 
+        }
+
+        function renderWorkplaceList() {
+            const workplaceListDiv = document.getElementById('workplaceList');
+            workplaceListDiv.innerHTML = workplaces.length === 0 ? 'Noch keine Arbeitsplätze hinzugefügt.' : '';
+            workplaces.forEach((wp, index) => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.draggable = true; // Make draggable
+                div.dataset.index = index; // Store original index
+                div.id = 'workplace-' + wp.replace(/\s/g, '-'); // Unique ID for drag-drop
+
+                div.innerHTML = `<span>${wp}</span><button class="remove-btn" onclick="removeWorkplace('${wp}')">X</button>`;
+
+                // Add drag-and-drop event listeners for workplaces
+                div.addEventListener('dragstart', handleWorkplaceDragStart);
+                div.addEventListener('dragover', handleWorkplaceDragOver);
+                div.addEventListener('dragleave', handleWorkplaceDragLeave);
+                div.addEventListener('drop', handleWorkplaceDrop);
+                div.addEventListener('dragend', handleWorkplaceDragEnd);
+
+                workplaceListDiv.appendChild(div);
+            });
+        }
+
+        // --- Functions for Drag and Drop (Workplaces) ---
+        let draggedWorkplaceIndex = null;
+
+        function handleWorkplaceDragStart(e) {
+            draggedItem = e.target;
+            draggedWorkplaceIndex = parseInt(draggedItem.dataset.index);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', draggedItem.innerHTML); // Required for Firefox
+            
+            setTimeout(() => {
+                draggedItem.classList.add('dragging');
+            }, 0);
+        }
+
+        function handleWorkplaceDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (e.target.classList.contains('list-item') && e.target !== draggedItem) {
+                const rect = e.target.getBoundingClientRect();
+                const offsetY = e.clientY - rect.top;
+                if (offsetY < rect.height / 2) {
+                    e.target.classList.add('drag-over');
+                    e.target.classList.remove('drag-over-bottom');
+                } else {
+                    e.target.classList.add('drag-over-bottom');
+                    e.target.classList.remove('drag-over');
+                }
+            }
+        }
+
+        function handleWorkplaceDragLeave(e) {
+            e.target.classList.remove('drag-over', 'drag-over-bottom');
+        }
+
+        function handleWorkplaceDrop(e) {
+            e.preventDefault();
+            e.target.classList.remove('drag-over', 'drag-over-bottom');
+
+            if (e.target.classList.contains('list-item') && e.target !== draggedItem) {
+                const targetWorkplaceIndex = parseInt(e.target.dataset.index);
+                const rect = e.target.getBoundingClientRect();
+                const offsetY = e.clientY - rect.top;
+                let newIndex = targetWorkplaceIndex;
+
+                if (offsetY > rect.height / 2) {
+                    newIndex++;
+                }
+                
+                if (draggedWorkplaceIndex === null) return;
+
+                const [movedWorkplace] = workplaces.splice(draggedWorkplaceIndex, 1);
+                workplaces.splice(newIndex > draggedWorkplaceIndex ? newIndex - 1 : newIndex, 0, movedWorkplace);
+                
+                saveData();
+                renderWorkplaceList();
+                updateWorkplaceSelects();
+                updateLinkedWorkplaceSelects();
+                displayEmployeeSkills(); // Re-render skills display if a workplace was selected
+            }
+        }
+
+        function handleWorkplaceDragEnd(e) {
+            draggedItem.classList.remove('dragging');
+            draggedItem = null;
+            draggedWorkplaceIndex = null;
+            document.querySelectorAll('.list-item').forEach(item => {
+                item.classList.remove('drag-over', 'drag-over-bottom');
+            });
+        }
+
+
+        // --- Funktionen für die Zuweisung von Fähigkeiten ---
+        function updateEmployeeSelects() {
+            const selectEmployee = document.getElementById('selectEmployeeForSkills');
+            selectEmployee.innerHTML = '<option value="">-- Mitarbeiter auswählen --</option>';
+            employees.forEach(emp => {
+                const option = document.createElement('option');
+                option.value = emp;
+                option.textContent = emp;
+                selectEmployee.appendChild(option);
+            });
+        }
+
+        function updateWorkplaceSelects() {
+            const selectWorkplaces = document.getElementById('selectWorkplacesForSkills');
+            selectWorkplaces.innerHTML = '';
+            document.getElementById('selectWorkplacesForSkills').size = Math.min(Math.max(workplaces.length, 4), 10);
+            workplaces.forEach(wp => {
+                const option = document.createElement('option');
+                option.value = wp;
+                option.textContent = wp;
+                selectWorkplaces.appendChild(option);
+            });
+        }
+
+        function displayEmployeeSkills() {
+            const selectedEmployee = document.getElementById('selectEmployeeForSkills').value;
+            const currentEmployeeSkillsDiv = document.getElementById('currentEmployeeSkills');
+            currentEmployeeSkillsDiv.innerHTML = '';
+
+            if (selectedEmployee && employeeSkills[selectedEmployee]) {
+                if (employeeSkills[selectedEmployee].length > 0) {
+                    employeeSkills[selectedEmployee].forEach(skill => {
+                        const div = document.createElement('div');
+                        div.className = 'list-item';
+                        div.textContent = skill;
+                        currentEmployeeSkillsDiv.appendChild(div);
+                    });
+                } else {
+                    currentEmployeeSkillsDiv.textContent = 'Dieser Mitarbeiter hat noch keine zugewiesenen Fähigkeiten.';
+                }
+                const selectWorkplaces = document.getElementById('selectWorkplacesForSkills');
+                Array.from(selectWorkplaces.options).forEach(option => {
+                    option.selected = employeeSkills[selectedEmployee].includes(option.value);
+                });
+            } else {
+                currentEmployeeSkillsDiv.textContent = 'Bitte einen Mitarbeiter auswählen.';
+            }
+        }
+
+        function assignSkills() {
+            const selectedEmployee = document.getElementById('selectEmployeeForSkills').value;
+            const selectedWorkplaces = Array.from(document.getElementById('selectWorkplacesForSkills').selectedOptions).map(option => option.value);
+
+            if (selectedEmployee) {
+                employeeSkills[selectedEmployee] = selectedWorkplaces;
+                displayEmployeeSkills(); 
+                displayMessage(`Fähigkeiten für ${selectedEmployee} aktualisiert.`, 'info');
+                saveData(); 
+            } else {
+                displayMessage('Bitte einen Mitarbeiter auswählen, dem Fähigkeiten zugewiesen werden sollen.', 'error');
+            }
+        }
+
+        // --- Funktion: Checkboxen für ANWESENDE Mitarbeiter aktualisieren ---
+        function updatePresentEmployeeCheckboxes() {
+            const presentEmployeesDiv = document.getElementById('presentEmployeesCheckboxes');
+            presentEmployeesDiv.innerHTML = ''; 
+
+            if (employees.length === 0) {
+                presentEmployeesDiv.textContent = 'Bitte zuerst Mitarbeiter hinzufügen.';
+                return;
+            }
+
+            employees.forEach(emp => {
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'presentEmployee';
+                checkbox.value = emp;
+                checkbox.checked = false; 
+                checkbox.addEventListener('change', updateSelectedEmployeeCount); 
+                
+                const span = document.createElement('span');
+                span.textContent = emp;
+                
+                label.appendChild(checkbox);
+                label.appendChild(span); 
+                presentEmployeesDiv.appendChild(label);
+            });
+            updateSelectedEmployeeCount(); 
+        }
+
+        // --- Funktion: Anzahl der ausgewählten Mitarbeiter aktualisieren und Checkboxen verwalten ---
+        function updateSelectedEmployeeCount() {
+            const presentCheckboxes = document.querySelectorAll('#presentEmployeesCheckboxes input[name="presentEmployee"]');
+            const selectedCount = Array.from(presentCheckboxes).filter(cb => cb.checked).length;
+            const requiredEmployees = workplaces.length; 
+
+            const countDisplay = document.getElementById('selectedEmployeeCount');
+            if (requiredEmployees === 0) {
+                countDisplay.textContent = `Bitte Arbeitsplätze erstellen, um die benötigte Mitarbeiteranzahl zu sehen.`;
+            } else {
+                countDisplay.textContent = `Ausgewählte Mitarbeiter: ${selectedCount} von ${requiredEmployees} (benötigt)`;
+            }
+            
+            manageEmployeeCheckboxes(selectedCount, requiredEmployees);
+        }
+
+        // --- Checkboxen basierend auf Auswahl verwalten (deaktivieren/aktivieren) ---
+        function manageEmployeeCheckboxes(selectedCount, requiredEmployees) {
+            const presentCheckboxes = document.querySelectorAll('#presentEmployeesCheckboxes input[name="presentEmployee"]');
+
+            if (selectedCount >= requiredEmployees && requiredEmployees > 0) { 
+                presentCheckboxes.forEach(cb => {
+                    if (!cb.checked) {
+                        cb.disabled = true; 
+                    }
+                });
+            } else {
+                presentCheckboxes.forEach(cb => {
+                    cb.disabled = false; 
+                });
+            }
+        }
+
+        // --- Hilfsfunktion: Ermittelt den vorhergehenden Tag ---
+        function getPreviousDay(currentDay) {
+            const days = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+            const currentIndex = days.indexOf(currentDay);
+            if (currentIndex > 0) {
+                return days[currentIndex - 1];
+            }
+            return null; 
+        }
+
+        // --- HILFSFUNKTION: Array zufällig mischen (Fisher-Yates Shuffle) ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; 
+            }
+        }
+
+        // --- Funktion zur Generierung des Schichtplans ---
+        function generateSchedule(startRotationIndex = 0) {
+            const scheduleOutputDiv = document.getElementById('scheduleOutput');
+            
+            // Wenn es der erste Aufruf ist (nicht von einer manuellen Bearbeitung), leere das Output-Feld
+            if (startRotationIndex === 0) {
+                scheduleOutputDiv.innerHTML = ''; 
+                document.getElementById('printScheduleBtn').style.display = 'none'; 
+                displayMessage('', 'info'); 
+                displayMessage('', 'error'); 
+            }
+
+            try {
+                const dayOfWeek = document.getElementById('dayOfWeek').value;
+                const presentCheckboxes = document.querySelectorAll('#presentEmployeesCheckboxes input[name="presentEmployee"]:checked');
+                const initialAvailableEmployeesForDay = Array.from(presentCheckboxes).map(cb => cb.value); // Dies sind alle Mitarbeiter, die heute arbeiten können
+
+                const maxWorkplaceRepeats = parseInt(document.getElementById('maxWorkplaceRepeats').value, 10);
+
+                // --- VALIDIERUNGEN ---
+                if (workplaces.length === 0) {
+                    displayMessage(`Fehler: Bitte erfasse mindestens einen Arbeitsplatz, um einen Plan zu erstellen.`, 'error');
+                    return;
+                }
+                
+                if (isNaN(maxWorkplaceRepeats) || maxWorkplaceRepeats < 1 || maxWorkplaceRepeats > 4) {
+                    displayMessage('Fehler: Ungültiger Wert für "Max. Wiederholungen". Bitte geben Sie eine Zahl zwischen 1 und 4 ein.', 'error');
+                    return;
+                }
+
+                if (initialAvailableEmployeesForDay.length !== workplaces.length) {
+                    displayMessage(`Fehler: Es wurden ${initialAvailableEmployeesForDay.length} Mitarbeiter ausgewählt. Es müssen genau ${workplaces.length} Mitarbeiter ausgewählt werden, um alle Arbeitsplätze zu besetzen.`, 'error');
+                    return;
+                }
+                
+                const employeesWithoutSkills = initialAvailableEmployeesForDay.filter(emp => !employeeSkills[emp] || employeeSkills[emp].length === 0);
+                if (employeesWithoutSkills.length > 0) {
+                    displayMessage(`Fehler: Folgende ausgewählte Mitarbeiter haben noch keine Fähigkeiten zugewiesen: ${employeesWithoutSkills.join(', ')}. Bitte weisen Sie Fähigkeiten zu.`, 'error');
+                    return;
+                }
+
+                const invalidLinkedWorkplaces = linkedWorkplaces.filter(link => 
+                    !workplaces.includes(link[0]) || !workplaces.includes(link[1])
+                );
+                if (invalidLinkedWorkplaces.length > 0) {
+                    displayMessage(`Fehler: Einige verknüpfte Arbeitsplätze existieren nicht mehr oder wurden umbenannt. Bitte prüfen Sie die Verknüpfungen im Admin-Menü.`, 'error');
+                    return;
+                }
+
+                // --- PLANERSTELLUNG START ---
+                const rotations = ['1. Runde', '2. Runde', '3. Runde', '4. Runde'];
+                // Initialisiere dailySchedule, falls es noch nicht existiert oder falls wir von vorne beginnen
+                if (!allDailySchedules[dayOfWeek] || startRotationIndex === 0) {
+                    allDailySchedules[dayOfWeek] = {};
+                    rotations.forEach(r => allDailySchedules[dayOfWeek][r] = {});
+                }
+
+                let employeeWorkplaceCounts = {}; // { emp: { wp: count } }
+                let employeeLastWorkplace = {}; // { emp: wp }
+                let employeePairDailyCounts = {}; // { 'EmpA_EmpB': count }
+
+                // Initialisiere Zähler für alle Mitarbeiter
+                initialAvailableEmployeesForDay.forEach(emp => {
+                    employeeWorkplaceCounts[emp] = {};
+                    workplaces.forEach(wp => {
+                        employeeWorkplaceCounts[emp][wp] = 0;
+                    });
+                    employeeLastWorkplace[emp] = null;
+                });
+
+                employeePairs.forEach(pairObj => {
+                    const sortedPairKey = pairObj.pair.sort().join('_');
+                    employeePairDailyCounts[sortedPairKey] = 0;
+                });
+
+                let overallOptimalSchedule = true; 
+
+                const previousDay = getPreviousDay(dayOfWeek);
+                const previousDaySchedule = allDailySchedules[previousDay] ? allDailySchedules[previousDay]['1. Runde'] : null;
+
+                // Bevor wir die Runden generieren, müssen wir die Zähler
+                // basierend auf manuell eingegebenen Runden initialisieren
+                for (let r = 0; r < startRotationIndex; r++) {
+                    const currentRotationName = rotations[r];
+                    const manualAssignments = allDailySchedules[dayOfWeek][currentRotationName];
+                    
+                    for (const wp in manualAssignments) {
+                        const emp = manualAssignments[wp];
+                        if (emp && emp !== 'N/A' && emp !== 'UNPLANBAR' && employees.includes(emp)) {
+                            if (!employeeWorkplaceCounts[emp]) {
+                                employeeWorkplaceCounts[emp] = {};
+                            }
+                            if (!employeeWorkplaceCounts[emp][wp]) {
+                                employeeWorkplaceCounts[emp][wp] = 0;
+                            }
+                            employeeWorkplaceCounts[emp][wp]++;
+                            employeeLastWorkplace[emp] = wp;
+
+                            // Aktualisiere employeePairDailyCounts für manuelle Runden
+                            employeePairs.forEach(pairObj => {
+                                const sortedPairKey = pairObj.pair.sort().join('_');
+                                if (pairObj.pair.includes(emp)) {
+                                    const otherEmpInPair = pairObj.pair.find(e => e !== emp);
+                                    if (manualAssignments[workplaces.find(w => manualAssignments[w] === otherEmpInPair)]) {
+                                        employeePairDailyCounts[sortedPairKey]++;
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // Generierung ab der angegebenen Start-Runde
+                for (let i = startRotationIndex; i < rotations.length; i++) { 
+                    const currentRotation = rotations[i];
+                    let rotationAssignments = {};
+                    
+                    // Wenn es eine manuelle Runde ist (also eine, die schon Daten hat und wir nicht komplett neu generieren)
+                    // dann übernehmen wir die existierenden manuellen Zuweisungen
+                    if (i < startRotationIndex && allDailySchedules[dayOfWeek][currentRotation]) {
+                        rotationAssignments = {...allDailySchedules[dayOfWeek][currentRotation]};
+                    } else {
+                        // Für neu zu generierende Runden oder wenn komplett neu generiert wird,
+                        // initialisiere mit leeren Zuweisungen.
+                        workplaces.forEach(wp => rotationAssignments[wp] = 'N/A');
+                    }
+
+                    // Dieser Pool enthält die Mitarbeiter, die für die aktuelle Runde noch nicht zugewiesen wurden
+                    let currentRoundEmployeePool = [...initialAvailableEmployeesForDay]; 
+                    
+                    // Mitarbeiter aus dem Pool entfernen, die bereits in dieser Rotation manuell zugewiesen wurden
+                    for (const wp in rotationAssignments) {
+                        const assignedEmp = rotationAssignments[wp];
+                        if (assignedEmp && assignedEmp !== 'N/A' && currentRoundEmployeePool.includes(assignedEmp)) {
+                            currentRoundEmployeePool = currentRoundEmployeePool.filter(e => e !== assignedEmp);
+                        }
+                    }
+
+                    let workplacesToAssign = [...workplaces].filter(wp => !rotationAssignments[wp] || rotationAssignments[wp] === 'N/A');
+
+                    // --- Zuerst versuchen, Mitarbeiter-Paare auf verknüpfte Arbeitsplätze zu setzen ---
+                    let unassignedLinkedWorkplaces = [...linkedWorkplaces].filter(link => 
+                        workplacesToAssign.includes(link[0]) && workplacesToAssign.includes(link[1])
+                    );
+
+                    let remainingEmployeePairs = [...employeePairs].sort((a, b) => {
+                        const keyA = a.pair.sort().join('_');
+                        const keyB = b.pair.sort().join('_');
+                        return employeePairDailyCounts[keyA] - employeePairDailyCounts[keyB]; 
+                    });
+
+                    shuffleArray(unassignedLinkedWorkplaces);
+
+                    for (const link of unassignedLinkedWorkplaces) {
+                        const wp1 = link[0];
+                        const wp2 = link[1];
+                        let assignedToLinked = false;
+                        
+                        // Wenn einer der verknüpften Arbeitsplätze bereits manuell zugewiesen ist, überspringe diese Verknüpfung
+                        if (rotationAssignments[wp1] && rotationAssignments[wp1] !== 'N/A' || rotationAssignments[wp2] && rotationAssignments[wp2] !== 'N/A') {
+                            continue;
+                        }
+
+                        for (const pairObj of remainingEmployeePairs) {
+                            const p1 = pairObj.pair[0];
+                            const p2 = pairObj.pair[1];
+                            const sortedPairKey = pairObj.pair.sort().join('_');
+
+                            const bothAvailableInPool = currentRoundEmployeePool.includes(p1) && currentRoundEmployeePool.includes(p2);
+                            
+                            if (!bothAvailableInPool) {
+                                continue; 
+                            }
+
+                            const p1_qual_wp1 = employeeSkills[p1].includes(wp1);
+                            const p1_qual_wp2 = employeeSkills[p1].includes(wp2);
+                            const p2_qual_wp1 = employeeSkills[p2].includes(wp1);
+                            const p2_qual_wp2 = employeeSkills[p2].includes(wp2);
+                            
+                            const pairCanCoverWorkplaces = 
+                                (p1_qual_wp1 && p2_qual_wp2) || (p1_qual_wp2 && p2_qual_wp1);
+                            
+                            if (pairCanCoverWorkplaces) {
+                                if (employeePairDailyCounts[sortedPairKey] < pairObj.maxDailyPairings) {
+                                    let employee1_candidate = null;
+                                    let employee2_candidate = null;
+
+                                    if (p1_qual_wp1 && p2_qual_wp1) { // Both can do WP1
+                                        // Prioritize keeping existing assignments from current schedule if available
+                                        if (rotationAssignments[wp1] === p1 && rotationAssignments[wp2] === p2) {
+                                            employee1_candidate = p1;
+                                            employee2_candidate = p2;
+                                        } else if (rotationAssignments[wp1] === p2 && rotationAssignments[wp2] === p1) {
+                                            employee1_candidate = p2;
+                                            employee2_candidate = p1;
+                                        } else { // Fallback if no existing assignment or different arrangement
+                                            employee1_candidate = p1; // Default
+                                            employee2_candidate = p2; // Default
+                                        }
+                                    }
+                                    if (p1_qual_wp1 && p2_qual_wp2) { // p1 for wp1, p2 for wp2
+                                        employee1_candidate = p1;
+                                        employee2_candidate = p2;
+                                    } else if (p1_qual_wp2 && p2_qual_wp1) { // p1 for wp2, p2 for wp1
+                                        employee1_candidate = p2;
+                                        employee2_candidate = p1;
+                                    }
+
+                                    if (employee1_candidate && employee2_candidate) {
+                                        rotationAssignments[wp1] = employee1_candidate;
+                                        rotationAssignments[wp2] = employee2_candidate;
+                                        
+                                        currentRoundEmployeePool = currentRoundEmployeePool.filter(emp => emp !== employee1_candidate && emp !== employee2_candidate);
+                                        
+                                        employeeWorkplaceCounts[employee1_candidate][wp1]++;
+                                        employeeWorkplaceCounts[employee2_candidate][wp2]++;
+                                        employeeLastWorkplace[employee1_candidate] = wp1;
+                                        employeeLastWorkplace[employee2_candidate] = wp2;
+                                        employeePairDailyCounts[sortedPairKey]++;
+                                        assignedToLinked = true;
+                                        break; 
+                                    }
+                                }
+                            }
+                        }
+
+                        if (assignedToLinked) {
+                            workplacesToAssign = workplacesToAssign.filter(w => w !== wp1 && w !== wp2);
+                        } else {
+                            overallOptimalSchedule = false; 
+                        }
+                    }
+
+                    let remainingWorkplacesToAssign = [...workplacesToAssign].filter(wp => !rotationAssignments[wp] || rotationAssignments[wp] === 'N/A');
+
+                    let currentWorkplacesWithCandidates = remainingWorkplacesToAssign.map(wp => { 
+                        return {
+                            name: wp,
+                            qualifiedAndAvailable: currentRoundEmployeePool.filter(emp => 
+                                employeeSkills[emp].includes(wp)
+                            )
+                        };
+                    });
+
+                    currentWorkplacesWithCandidates.sort((a, b) => {
+                        const a_count = a.qualifiedAndAvailable.length;
+                        const b_count = b.qualifiedAndAvailable.length;
+                        return a_count - b_count;
+                    });
+                    
+                    for (const workplaceObj of currentWorkplacesWithCandidates) {
+                        const currentWorkplace = workplaceObj.name;
+                        let assigned = false;
+
+                        let currentEligibleEmployees = workplaceObj.qualifiedAndAvailable.filter(emp => currentRoundEmployeePool.includes(emp));
+                        
+                        shuffleArray(currentEligibleEmployees); 
+
+                        let optimalCandidates = [...currentEligibleEmployees].sort((a, b) => {
+                            const a_consecutive_score = (employeeLastWorkplace[a] === currentWorkplace) ? 1 : 0;
+                            const b_consecutive_score = (employeeLastWorkplace[b] === currentWorkplace) ? 1 : 0;
+                            if (a_consecutive_score !== b_consecutive_score) {
+                                return a_consecutive_score - b_consecutive_score;
+                            }
+
+                            const a_repeats = employeeWorkplaceCounts[a][currentWorkplace];
+                            const b_repeats = employeeWorkplaceCounts[b][currentWorkplace];
+                            if (a_repeats !== b_repeats) {
+                                return a_repeats - b_repeats;
+                            }
+                            
+                            if (i === 0 && previousDaySchedule) { 
+                                const a_was_at_same_wp_prev_day = (previousDaySchedule[currentWorkplace] === a) ? 1 : 0;
+                                const b_was_at_same_wp_prev_day = (previousDaySchedule[currentWorkplace] === b) ? 1 : 0;
+                                if (a_was_at_same_wp_prev_day !== b_was_at_same_wp_prev_day) {
+                                    return a_was_at_same_wp_prev_day - b_was_at_same_wp_prev_day;
+                                }
+                            }
+
+                            const a_unique_workplaces = Object.values(employeeWorkplaceCounts[a]).filter(count => count > 0).length;
+                            const b_unique_workplaces = Object.values(employeeWorkplaceCounts[b]).filter(count => count > 0).length;
+                            return b_unique_workplaces - a_unique_workplaces; 
+                        });
+
+                        for (const emp of optimalCandidates) {
+                            if (currentRoundEmployeePool.includes(emp)) { 
+                                if (employeeWorkplaceCounts[emp][currentWorkplace] < maxWorkplaceRepeats) {
+                                    rotationAssignments[currentWorkplace] = emp;
+                                    currentRoundEmployeePool = currentRoundEmployeePool.filter(e => e !== emp); 
+                                    employeeWorkplaceCounts[emp][currentWorkplace]++;
+                                    employeeLastWorkplace[emp] = currentWorkplace;
+                                    assigned = true;
+                                    break;
+                                } else {
+                                    overallOptimalSchedule = false; 
+                                }
+                            }
+                        }
+
+                        if (!assigned) {
+                            overallOptimalSchedule = false; 
+                            for (const emp of currentEligibleEmployees) { 
+                                if (currentRoundEmployeePool.includes(emp)) { 
+                                    rotationAssignments[currentWorkplace] = emp;
+                                    currentRoundEmployeePool = currentRoundEmployeePool.filter(e => e !== emp);
+                                    employeeWorkplaceCounts[emp][currentWorkplace]++;
+                                    employeeLastWorkplace[emp] = currentWorkplace;
+                                    assigned = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!assigned) {
+                            rotationAssignments[currentWorkplace] = 'UNPLANBAR';
+                            displayMessage(`Kritischer Fehler: Arbeitsplatz "${currentWorkplace}" konnte nicht besetzt werden. Es gibt keine qualifizierten Mitarbeiter mehr, die in dieser Runde zugewiesen werden können. Dies kann an zu wenigen Mitarbeitern, fehlenden Fähigkeiten oder einer ungünstigen Verteilung der Fähigkeiten liegen.`, 'error');
+                            overallOptimalSchedule = false;
+                        }
+                    }
+                    allDailySchedules[dayOfWeek][currentRotation] = rotationAssignments;
+                }
+
+                saveData();
+                if (startRotationIndex === 0) {
+                    displayMessage('Schichtplan erfolgreich generiert und gespeichert!', 'info');
+                } else {
+                    displayMessage(`Runden ${rotations[startRotationIndex]} bis ${rotations[rotations.length - 1]} neu generiert und gespeichert!`, 'info');
+                }
+
+                renderScheduleTable(dayOfWeek);
+                document.getElementById('printScheduleBtn').style.display = 'block';
+
+            } catch (error) {
+                console.error("Fehler bei der Schichtplanerstellung:", error);
+                displayMessage(`Ein unerwarteter Fehler ist aufgetreten: ${error.message}. Dies könnte auf fehlende Daten (Mitarbeiter, Arbeitsplätze, Fähigkeiten) oder einen internen Fehler hinweisen.`, 'error');
+                document.getElementById('printScheduleBtn').style.display = 'none';
+            }
+        }
+
+        function renderScheduleTable(day) {
+            const scheduleOutputDiv = document.getElementById('scheduleOutput');
+            scheduleOutputDiv.innerHTML = ''; // Leere den vorherigen Inhalt
+
+            const header = document.createElement('h2');
+            header.textContent = `Schichtplan für ${day}`;
+            scheduleOutputDiv.appendChild(header);
+
+            const table = document.createElement('table');
+            table.className = 'schedule-table';
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+
+            let headerRow = document.createElement('tr');
+            let thCorner = document.createElement('th');
+            thCorner.textContent = 'Arbeitsplatz';
+            headerRow.appendChild(thCorner);
+            const rotations = ['1. Runde', '2. Runde', '3. Runde', '4. Runde'];
+            rotations.forEach(round => {
+                let th = document.createElement('th');
+                th.textContent = round;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            workplaces.forEach(wp => {
+                let row = document.createElement('tr');
+                let tdWorkplace = document.createElement('td');
+                tdWorkplace.textContent = wp;
+                row.appendChild(tdWorkplace);
+
+                rotations.forEach((rotation, index) => {
+                    let td = document.createElement('td');
+                    td.textContent = allDailySchedules[day][rotation][wp] || 'N/A';
+                    td.setAttribute('contenteditable', 'true');
+                    td.dataset.rotation = rotation;
+                    td.dataset.workplace = wp;
+                    td.dataset.day = day;
+
+                    td.addEventListener('blur', function() {
+                        const editedDay = this.dataset.day;
+                        const editedRotation = this.dataset.rotation;
+                        const editedWorkplace = this.dataset.workplace;
+                        const newValue = this.textContent.trim();
+                        
+                        // Nur speichern und neu generieren, wenn eine gültige Eingabe gemacht wurde (nicht leer)
+                        if (newValue !== '') {
+                            allDailySchedules[editedDay][editedRotation][editedWorkplace] = newValue;
+                            saveData();
+                            displayMessage('Manuelle Änderung gespeichert!', 'info');
+                            
+                            // Finde den Index der bearbeiteten Runde
+                            const editedRotationIndex = rotations.indexOf(editedRotation);
+                            // Starte die Regeneration ab der nächsten Runde
+                            if (editedRotationIndex < rotations.length -1) { // Nur wenn es noch Runden danach gibt
+                                generateSchedule(editedRotationIndex + 1); 
+                            } else {
+                                // Wenn die letzte Runde bearbeitet wurde, nur die Farbcodierung aktualisieren
+                                // und die Tabelle neu rendern, um alle Farbcodierungen anzuwenden
+                                renderScheduleTable(dayOfWeek.value);
+                            }
+                        } else {
+                            // Wenn die Zelle geleert wurde, setze sie auf 'N/A' und regeneriere
+                            this.textContent = 'N/A';
+                            allDailySchedules[editedDay][editedRotation][editedWorkplace] = 'N/A';
+                            saveData();
+                            displayMessage('Manuelle Änderung gespeichert!', 'info');
+                            const editedRotationIndex = rotations.indexOf(editedRotation);
+                            if (editedRotationIndex < rotations.length -1) { 
+                                generateSchedule(editedRotationIndex + 1); 
+                            } else {
+                                renderScheduleTable(dayOfWeek.value);
+                            }
+                        }
+                    });
+
+                    // Farbcodierung direkt anwenden beim Rendern der Tabelle
+                    // checkAndColorCell wird hier nach dem Rendern der gesamten Tabelle aufgerufen.
+                    // Die Funktion muss die Daten aus allDailySchedules[day][rotation] abfragen können.
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+            scheduleOutputDiv.appendChild(table);
+
+            // Nach dem Rendern der gesamten Tabelle, gehen wir alle Zellen durch
+            // und wenden die Farbcodierung und Titel an.
+            const allTds = document.querySelectorAll('.schedule-table td[data-day]');
+            allTds.forEach(td => {
+                const day = td.dataset.day;
+                const rotation = td.dataset.rotation;
+                const employeeName = td.textContent.trim();
+                checkAndColorCell(td, employeeName, rotation, day);
+            });
+        }
+
+
+        // --- Funktion zur Überprüfung und Einfärbung von Zellen ---
+        function checkAndColorCell(cellElement, employeeName, rotation, day) {
+            // Immer alle Farb- und Titelinformationen zuerst entfernen
+            cellElement.classList.remove('error-duplicate', 'warn-skill', 'warn-unknown', 'auto-compromise');
+            cellElement.style.backgroundColor = ''; // Setze auf Standard zurück
+            let cellWarnings = []; // Array, um alle Warnungen/Fehler für diese Zelle zu sammeln
+
+            const workplace = cellElement.dataset.workplace;
+            const currentRotationData = allDailySchedules[day][rotation];
+
+            // Rule 1: UNPLANBAR
+            if (employeeName === 'UNPLANBAR') {
+                cellWarnings.push('Konnte nicht automatisch geplant werden.');
+                cellElement.classList.add('error-duplicate');
+            } else if (employeeName === 'N/A') {
+                // Keine spezielle Behandlung, wenn N/A, es sei denn, andere Regeln gelten.
+            }
+            // Rule 2: Unknown employee
+            else if (!employees.includes(employeeName)) {
+                cellWarnings.push('Warnung: Mitarbeiter ist nicht registriert.');
+                cellElement.classList.add('warn-unknown');
+            }
+            // Rule 3: Skill mismatch (only if employee is known and not N/A/UNPLANBAR)
+            else if (employeeSkills[employeeName] && !employeeSkills[employeeName].includes(workplace)) {
+                cellWarnings.push(`Warnung: ${employeeName} hat keine Fähigkeit für ${workplace}.`);
+                cellElement.classList.add('warn-skill');
+            }
+
+            // Rule 4: Duplicate employee in the same rotation (column)
+            if (employeeName && employeeName !== 'N/A' && employeeName !== 'UNPLANBAR' && employees.includes(employeeName)) {
+                let countInRotation = 0;
+                for (const wpKey in currentRotationData) {
+                    if (currentRotationData[wpKey] === employeeName) {
+                        countInRotation++;
+                    }
+                }
+                if (countInRotation > 1) {
+                    cellWarnings.push(`Fehler: Dieser Mitarbeiter ist in dieser Runde mehrfach zugewiesen!`);
+                    cellElement.classList.add('error-duplicate');
+                }
+            }
+
+            // Rule 5: Linked workplaces check
+            for (const link of linkedWorkplaces) {
+                const wp1 = link[0];
+                const wp2 = link[1];
+
+                // Check if the current cell's workplace is part of this link
+                if (workplace === wp1 || workplace === wp2) {
+                    const emp1 = currentRotationData[wp1];
+                    const emp2 = currentRotationData[wp2];
+
+                    const areBothAssigned = (emp1 && emp1 !== 'N/A' && emp1 !== 'UNPLANBAR') && (emp2 && emp2 !== 'N/A' && emp2 !== 'UNPLANBAR');
+                    const areBothUnassigned = (emp1 === 'N/A' || emp1 === 'UNPLANBAR') && (emp2 === 'N/A' || emp2 === 'UNPLANBAR');
+                    const areSameEmployeeAtLinked = emp1 === emp2 && emp1 !== 'N/A' && emp1 !== 'UNPLANBAR';
+
+                    if (!areBothAssigned && !areBothUnassigned) {
+                        cellWarnings.push(`Warnung: Verknüpfte Arbeitsplätze ${wp1} und ${wp2} sind nicht korrekt zusammen besetzt.`);
+                        cellElement.classList.add('warn-skill'); // Use warn-skill for this issue
+                    } else if (areSameEmployeeAtLinked) {
+                        cellWarnings.push(`Fehler: Derselbe Mitarbeiter (${emp1}) an verknüpften Arbeitsplätzen ${wp1} und ${wp2}.`);
+                        cellElement.classList.add('error-duplicate'); // Use error-duplicate for this critical issue
+                    }
+                }
+            }
+
+            // Set the final title for the cell
+            cellElement.title = cellWarnings.join('\n');
+            if (cellWarnings.length === 0) {
+                cellElement.title = '';
+            }
+        }
+
+
+        // --- Funktion zum Drucken des Schichtplans ---
+        function printSchedule() {
+            const scheduleOutputContent = document.getElementById('scheduleOutput').innerHTML;
+            const dayOfWeek = document.getElementById('dayOfWeek').value;
+
+            const printContent = `
+                <html>
+                <head>
+                    <title>Schichtplan ${dayOfWeek}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        h2 { color: #0056b3; text-align: center; margin-bottom: 20px;}
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-top: 15px;
+                        }
+                        th, td {
+                            border: 1px solid #ddd;
+                            padding: 10px;
+                            text-align: left;
+                        }
+                        th {
+                            background-color: #e2f0ff;
+                            color: #0056b3;
+                        }
+                        td {
+                            background-color: #fff;
+                        }
+                        td[style*="background-color"] {
+                            -webkit-print-color-adjust: exact;
+                            color-adjust: exact;
+                        }
+                        td.error-duplicate {
+                            background-color: #ff6666 !important;
+                        }
+                        td.warn-skill {
+                            background-color: #ffaa00 !important;
+                        }
+                        td.warn-unknown {
+                            background-color: #a0a0a0 !important;
+                        }
+                        td.auto-compromise {
+                            background-color: #ffddaa !important;
+                        }
+
+                        @page {
+                            margin: 1cm;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${scheduleOutputContent}
+                </body>
+                </html>
+            `;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.open();
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+
+            printWindow.onload = function() {
+                printWindow.focus();
+                printWindow.print();
+            };
+        }
+
+        // --- Helper for displaying messages ---
+        function displayMessage(message, type) {
+            const errorMessageDiv = document.getElementById('errorMessage');
+            const infoMessageDiv = document.getElementById('infoMessage');
+
+            errorMessageDiv.textContent = '';
+            infoMessageDiv.textContent = '';
+
+            if (type === 'error') {
+                errorMessageDiv.textContent = message;
+            } else if (type === 'info') {
+                infoMessageDiv.textContent = message;
+            }
+        }
+
+        // Initialisierung: Daten beim Laden der Seite laden und UI aktualisieren
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            renderEmployeeList();
+            renderWorkplaceList();
+            updateEmployeeSelects();
+            updateWorkplaceSelects();
+            updatePresentEmployeeCheckboxes();
+        });
+function exportToJSON() {
+    const dataToExport = {
+        employees,
+        workplaces,
+        employeeSkills,
+        allDailySchedules,
+        linkedWorkplaces,
+        employeePairs
+    };
+
+    const jsonStr = JSON.stringify(dataToExport, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'schichtplan-daten.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function importFromJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            // Felder einzeln übernehmen
+            employees = importedData.employees || [];
+            workplaces = importedData.workplaces || [];
+            employeeSkills = importedData.employeeSkills || {};
+            allDailySchedules = importedData.allDailySchedules || {};
+            linkedWorkplaces = importedData.linkedWorkplaces || [];
+            employeePairs = importedData.employeePairs || [];
+
+            // UI aktualisieren
+            renderEmployeeList();
+            renderWorkplaceList();
+            updateEmployeeSelects();
+            updateWorkplaceSelects();
+            updateLinkedWorkplaceSelects();
+            updateEmployeePairSelects();
+            updatePresentEmployeeCheckboxes();
+            renderLinkedWorkplaces();
+            renderEmployeePairs();
+
+            displayMessage('Daten erfolgreich importiert.', 'info');
+        } catch (error) {
+            displayMessage('Fehler beim Importieren der Datei: ' + error.message, 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+    </script>
+</body>
+</html>
