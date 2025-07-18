@@ -172,7 +172,16 @@
         .admin-section .input-group button { margin-top: 5px; }
         .employee-pair-item span { flex-grow: 1; }
         .employee-pair-item select { width: auto; margin-left: 10px; margin-right: 10px; }
-        .admin-button-container { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+        .admin-button-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .admin-button-container .left-buttons {
+            display: flex;
+            gap: 10px;
+        }
         .admin-access-button {
             background-color: #6c757d; color: white; padding: 12px 25px;
             border: none; border-radius: 4px; cursor: pointer; font-size: 18px;
@@ -218,17 +227,17 @@
                 <h3 style="margin: 0;" id="headerShift"></h3>
             </div>
         </div>
-        <p>Erfasse deine Mitarbeiter, Arbeitsplätze und deren Fähigkeiten, um einen täglichen Schichtplan zu erstellen.</p>
-
+        
         <div class="admin-button-container">
+            <div class="left-buttons">
+                <button class="admin-access-button" onclick="exportToJSON()">Daten exportieren</button>
+                <input type="file" id="importJSONFile" accept=".json" style="display:none" onchange="importFromJSON(event)">
+                <button class="admin-access-button" onclick="document.getElementById('importJSONFile').click()">Daten importieren</button>
+            </div>
             <button class="admin-access-button" onclick="openAdminLogin()">Login</button>
         </div>
         
-        <div class="input-group">
-            <button onclick="exportToJSON()">Daten als JSON exportieren</button>
-            <input type="file" id="importJSONFile" accept=".json" style="display:none" onchange="importFromJSON(event)">
-            <button onclick="document.getElementById('importJSONFile').click()">Daten aus JSON importieren</button>
-        </div>
+        <p>Erfasse deine Mitarbeiter, Arbeitsplätze und deren Fähigkeiten, um einen täglichen Schichtplan zu erstellen.</p>
 
         <h2>1. Mitarbeiter erfassen</h2>
         <div class="input-group">
@@ -376,7 +385,6 @@
             const shiftSelect = document.getElementById('shiftSelect').value;
             const startErrorMessage = document.getElementById('startErrorMessage');
             
-            // Validierung für das Gruppenformat "MA" + 4 Zahlen
             const groupRegex = /^MA\d{4}$/;
             if (!groupRegex.test(groupInput)) {
                 startErrorMessage.textContent = 'Ungültiges Gruppenformat. Bitte MA gefolgt von 4 Zahlen eingeben (z.B. MA1234).';
@@ -396,7 +404,6 @@
             loadData();
         }
 
-        // --- NEUE Funktionen zum Speichern und Laden der Daten über Google Apps Script ---
         async function saveData() {
             if (!currentGroup || !currentShift) return;
 
@@ -407,7 +414,6 @@
 
             displayMessage('Speichere Daten online...', 'info');
             
-            // Hänge Gruppe und Schicht als URL-Parameter an
             const url = `${G_SCRIPT_URL}?group=${currentGroup}&shift=${currentShift}`;
 
             try {
@@ -450,19 +456,16 @@
                     displayMessage('Daten erfolgreich geladen.', 'info');
                 } else {
                      displayMessage('Keine Daten für diese Gruppe/Schicht gefunden. Es wird ein neuer Datensatz angelegt.', 'info');
-                     // Reset data for a new session
                      employees = []; workplaces = []; employeeSkills = {};
                      allDailySchedules = {}; linkedWorkplaces = []; employeePairs = [];
                 }
             } catch (error) {
                 console.error('Fehler beim Laden der Daten:', error);
                 displayMessage(`Konnte keine Daten laden. Eventuell ist es der erste Start für diese Gruppe/Schicht. (${error.message})`, 'error');
-                 // Reset data on error
                  employees = []; workplaces = []; employeeSkills = {};
                  allDailySchedules = {}; linkedWorkplaces = []; employeePairs = [];
             }
             
-            // Komplette UI nach dem Laden aktualisieren
             renderEmployeeList();
             renderWorkplaceList();
             updateEmployeeSelects();
@@ -474,7 +477,6 @@
             renderEmployeePairs();
         }
         
-        // --- Admin-Menü Funktionen ---
         function openAdminLogin() {
             document.getElementById('adminOverlay').style.display = 'flex';
             document.getElementById('adminLogin').style.display = 'block';
@@ -506,7 +508,6 @@
             }
         }
 
-        // --- Arbeitsplatz-Verknüpfungs-Funktionen ---
         function updateLinkedWorkplaceSelects() {
             const selectWp1 = document.getElementById('selectWorkplace1');
             const selectWp2 = document.getElementById('selectWorkplace2');
@@ -589,7 +590,6 @@
             });
         }
 
-        // --- Mitarbeiter-Paar Verknüpfungs-Funktionen ---
         function updateEmployeePairSelects() {
             const selectEmp1 = document.getElementById('selectEmployee1');
             const selectEmp2 = document.getElementById('selectEmployee2');
@@ -688,7 +688,6 @@
             displayMessage('Maximale gemeinsame Runden aktualisiert.', 'info');
         }
 
-        // --- Funktionen zum Hinzufügen und Anzeigen von Mitarbeitern ---
         function addEmployee() {
             const employeeNameInput = document.getElementById('employeeName');
             const name = employeeNameInput.value.trim();
